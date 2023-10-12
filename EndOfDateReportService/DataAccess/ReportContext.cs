@@ -10,7 +10,6 @@ public class ReportContext: DbContext
     {
         ChangeTracker.LazyLoadingEnabled = false;
     }
-    public DbSet<Note> Notes { get; set; }
     public DbSet<Branch> Branches { get; set; }
     public DbSet<Lane> Lanes { get; set; }
     public DbSet<PaymentMethod> PaymentMethods { get; set; }

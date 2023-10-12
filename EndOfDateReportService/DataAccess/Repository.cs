@@ -39,21 +39,9 @@ public class Repository
         return lane.Entity;
     }
 
-    public async Task<Note> CreateNote(Note entity)
-    {
-        var Note = await context.Notes.AddAsync(entity);
-        await context.SaveChangesAsync();
-        return Note.Entity;
-    }
-
     public async Task<Lane> GetLaneByBranchId(int laneId, int branchId)
     {
         return await context.Lanes.FirstOrDefaultAsync(x => x.LaneId == laneId && x.BranchId == branchId);
-    }
-
-    public async Task<Note> GetNoteByBranchId( int branchId, DateTime date)
-    {
-        return await context.Notes.FirstOrDefaultAsync(x => x.BranchId == branchId && x.CreatedDate == date);
     }
 
     public async Task<bool> TryGetReport(DateTime reportDate)
@@ -73,20 +61,6 @@ public class Repository
         {
             var e =ex.Message;
             return paymentMethod;
-        }
-    }
-    public async Task<Note> UpdateNote(Note note)
-    {
-        try
-        {
-            var nt = context.Notes.Update(note);
-            await context.SaveChangesAsync();
-            return note;
-        }
-        catch (Exception ex)
-        {
-            var e = ex.Message;
-            return note;
         }
     }
 }

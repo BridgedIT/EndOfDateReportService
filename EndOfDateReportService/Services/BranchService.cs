@@ -166,7 +166,6 @@ namespace EndOfDateReportService.Services
                         Gst = await _pdfService.ExecuteGSTQuery(date, branch.Id),
                         EFTPOSFee = await _pdfService.ExecuteFEEQuery(date, branch),
                         Lanes = (ICollection<LaneModelOut>)_mapper.Map<IEnumerable<LaneModelOut>>(branch.Lanes),
-                        Note = branch.Note
                     });
             }
             return branchesModelOut;
