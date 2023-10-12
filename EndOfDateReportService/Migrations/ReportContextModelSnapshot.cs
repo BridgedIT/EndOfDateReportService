@@ -36,7 +36,7 @@ namespace EndOfDateReportService.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Branches");
+                    b.ToTable("Branches", (string)null);
 
                     b.HasData(
                         new
@@ -79,7 +79,7 @@ namespace EndOfDateReportService.Migrations
 
                     b.HasIndex("BranchId");
 
-                    b.ToTable("Lanes");
+                    b.ToTable("Lanes", (string)null);
                 });
 
             modelBuilder.Entity("EndOfDateReportService.Domain.Note", b =>
@@ -104,7 +104,7 @@ namespace EndOfDateReportService.Migrations
                     b.HasIndex("BranchId")
                         .IsUnique();
 
-                    b.ToTable("Notes");
+                    b.ToTable("Notes", (string)null);
                 });
 
             modelBuilder.Entity("EndOfDateReportService.Domain.PaymentMethod", b =>
@@ -144,7 +144,7 @@ namespace EndOfDateReportService.Migrations
                     b.HasIndex("Name", "LaneId", "BranchId", "ReportDate")
                         .IsUnique();
 
-                    b.ToTable("PaymentMethods");
+                    b.ToTable("PaymentMethods", (string)null);
                 });
 
             modelBuilder.Entity("EndOfDateReportService.Domain.Lane", b =>
