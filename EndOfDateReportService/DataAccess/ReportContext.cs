@@ -13,6 +13,7 @@ public class ReportContext: DbContext
     public DbSet<Branch> Branches { get; set; }
     public DbSet<Lane> Lanes { get; set; }
     public DbSet<PaymentMethod> PaymentMethods { get; set; }
+    public DbSet<NoteAdjustments> NotesAdjustments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,8 +41,7 @@ public class ReportContext: DbContext
         modelBuilder.Entity<PaymentMethod>().Property(x => x.Id).ValueGeneratedOnAdd();
         modelBuilder.Entity<PaymentMethod>().HasKey(x => x.Id);
 
-
-
+        modelBuilder.Entity<NoteAdjustments>().HasKey(x => x.Id);
 
         modelBuilder.Entity<Branch>().HasData(
             new Branch()
