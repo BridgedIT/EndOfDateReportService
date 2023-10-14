@@ -63,4 +63,29 @@ public class Repository
             return paymentMethod;
         }
     }
+
+    public async Task CreateNoteAdjustments(NoteAdjustments noteAdjustments)
+    {
+        var id = await context.NotesAdjustments.OrderByDescending(e => e.Id)
+                                    .Select(e => e.Id)
+                                    .FirstOrDefaultAsync();
+        noteAdjustments.Id = id + 1;
+        await context.NotesAdjustments.AddAsync(noteAdjustments);
+        await context.SaveChangesAsync();
+    }
+
+    public async Task<NoteAdjustments> UpdateNoteAdjustments(NoteAdjustments noteAdjustments)
+    {
+        try
+        {
+            var na = context.NotesAdjustments.Update(noteAdjustments);
+            await context.SaveChangesAsync();
+            return na.Entity;
+        }
+        catch (Exception ex)
+        {
+            var e = ex.Message;
+            return noteAdjustments;
+        }
+    }
 }

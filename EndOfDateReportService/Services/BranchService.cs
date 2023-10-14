@@ -106,6 +106,13 @@ namespace EndOfDateReportService.Services
                             };
                             await _repository.CreatePaymentMethodReport(paymentMethod);
                         }
+                        var noteAdjustment = new NoteAdjustments()
+                        {
+                            BranchId = branch.Id,
+                            LaneId = laneFromDb.Id,
+                            Date = new DateTime(startDate.Year, startDate.Month, startDate.Day, startDate.Hour, startDate.Minute, startDate.Second, DateTimeKind.Utc)
+                        };
+
                     }
                 }
 
