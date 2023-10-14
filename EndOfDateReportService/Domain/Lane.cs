@@ -15,4 +15,5 @@ public class Lane
     [BindNever]
     public Branch? Branch { get; set; }
     public ICollection<PaymentMethod> PaymentMethods { get; set; }
+    public NoteAdjustments NoteAdjustments { get; set; }
 }

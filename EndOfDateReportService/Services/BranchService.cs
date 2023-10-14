@@ -112,7 +112,7 @@ namespace EndOfDateReportService.Services
                             LaneId = laneFromDb.Id,
                             Date = new DateTime(startDate.Year, startDate.Month, startDate.Day, startDate.Hour, startDate.Minute, startDate.Second, DateTimeKind.Utc)
                         };
-
+                        await _repository.CreateNoteAdjustments(noteAdjustment);
                     }
                 }
 
@@ -139,7 +139,7 @@ namespace EndOfDateReportService.Services
                     {
                         await _repository.UpdatePaymentMethod(pm);
                     }
-                    
+                   await _repository.UpdateNoteAdjustments(lane.NoteAdjustments);
                 }
             }
             
