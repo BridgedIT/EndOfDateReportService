@@ -14,6 +14,7 @@ public class ReportContext: DbContext
     public DbSet<Branch> Branches { get; set; }
     public DbSet<Lane> Lanes { get; set; }
     public DbSet<PaymentMethod> PaymentMethods { get; set; }
+    public DbSet<User> Users { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

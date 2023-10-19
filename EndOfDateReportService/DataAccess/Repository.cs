@@ -1,4 +1,5 @@
 using EndOfDateReportService.Domain;
+using iTextSharp.xmp.impl;
 using Microsoft.EntityFrameworkCore;
 
 namespace EndOfDateReportService.DataAccess;
@@ -89,4 +90,63 @@ public class Repository
             return note;
         }
     }
+
+    public async Task<User> CreateUser(User entity)
+    {
+        try
+        {
+            var user = await context.Users.AddAsync(entity);
+            await context.SaveChangesAsync();
+            return user.Entity;
+        }
+        catch (Exception ex)
+        {
+            var e = ex.Message;
+            return entity;
+        }
+    }
+
+    public async Task<User> UpdateUser(User entity)
+    {
+        try 
+        {
+            if (await UserExistsAsync(entity.UserName)) 
+            {
+                var user = context.Users.Update(entity);
+                await context.SaveChangesAsync();
+                return user.Entity;
+            }
+            return null;
+        }
+        catch (Exception ex)
+        {
+            var e = ex.Message;
+            return entity;
+        }
+    }
+
+    public async Task<User> GetUser(string user)
+    {
+        if (await UserExistsAsync(user))
+        {
+            return await context.Users.FirstOrDefaultAsync(x => x.UserName == user);
+        }
+
+        return null;
+    }
+
+    public async Task<bool> UserExistsAsync(string username)
+    {
+        try
+        {
+            return await context.Users.AnyAsync(x => x.UserName == username);
+        }
+        catch (Exception ex)
+        {
+            var errorMessage = ex.Message;
+            return false;
+        }
+    }
+
+
 }

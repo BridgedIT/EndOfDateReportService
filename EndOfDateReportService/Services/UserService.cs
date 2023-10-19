@@ -1,4 +1,5 @@
-﻿using EndOfDateReportService.Domain;
+﻿using EndOfDateReportService.DataAccess;
+using EndOfDateReportService.Domain;
 using EndOfDateReportService.ServicesInterfaces;
 
 namespace EndOfDateReportService.Services
@@ -7,16 +8,19 @@ namespace EndOfDateReportService.Services
     {
         private readonly string _connectionString;
         private readonly IConfiguration _configuration;
+        private Repository _repository;
 
-        public UserService(IConfiguration configuration) 
+        public UserService(IConfiguration configuration, Repository repository) 
         { 
             _configuration = configuration;
             _connectionString = configuration.GetConnectionString("DefaultConnection");
+            _repository = repository;
         }
 
         public User CreateUser(User user)
         {
-            throw new NotImplementedException();
+            var userToReturn = _repository.CreateUser(user);
+            return userToReturn.Result;
         }
 
         public User UpdateUser(User User)
