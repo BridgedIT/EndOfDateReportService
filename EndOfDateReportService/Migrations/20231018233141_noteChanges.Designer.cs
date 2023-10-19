@@ -3,6 +3,7 @@ using System;
 using EndOfDateReportService.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EndOfDateReportService.Migrations
 {
     [DbContext(typeof(ReportContext))]
-    partial class ReportContextModelSnapshot : ModelSnapshot
+    [Migration("20231018233141_noteChanges")]
+    partial class noteChanges
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -107,7 +109,7 @@ namespace EndOfDateReportService.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("LaneId", "Date", "BranchId")
+                    b.HasIndex("LaneId", "Date")
                         .IsUnique();
 
                     b.ToTable("NotesAdjustments");

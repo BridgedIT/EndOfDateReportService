@@ -32,6 +32,7 @@ public class ReportContext: DbContext
         modelBuilder.Entity<Lane>().Property(x => x.Id).ValueGeneratedOnAdd();
         modelBuilder.Entity<Lane>().HasOne(x => x.Branch).WithMany(x => x.Lanes)
             .HasForeignKey(x => x.BranchId);
+        modelBuilder.Entity<Lane>().HasMany(x => x.NoteAdjustments).WithOne(x => x.Lane).HasForeignKey(x => x.LaneId);
 
 
         modelBuilder.Entity<PaymentMethod>().HasOne(x => x.Lane).WithMany(x => x.PaymentMethods)
@@ -42,6 +43,10 @@ public class ReportContext: DbContext
         modelBuilder.Entity<PaymentMethod>().HasKey(x => x.Id);
 
         modelBuilder.Entity<NoteAdjustments>().HasKey(x => x.Id);
+        modelBuilder.Entity<NoteAdjustments>().Property(x => x.Id).ValueGeneratedOnAdd();
+        modelBuilder.Entity<NoteAdjustments>().HasIndex(x => new { x.LaneId, x.Date , x.BranchId}).IsUnique();
+        modelBuilder.Entity<NoteAdjustments>().HasOne(x => x.Lane).WithMany(x => x.NoteAdjustments).HasForeignKey(x => x.LaneId);
+
 
         modelBuilder.Entity<Branch>().HasData(
             new Branch()

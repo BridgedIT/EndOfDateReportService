@@ -106,13 +106,6 @@ namespace EndOfDateReportService.Services
                             };
                             await _repository.CreatePaymentMethodReport(paymentMethod);
                         }
-                        var noteAdjustment = new NoteAdjustments()
-                        {
-                            BranchId = branch.Id,
-                            LaneId = laneFromDb.Id,
-                            Date = new DateTime(startDate.Year, startDate.Month, startDate.Day, startDate.Hour, startDate.Minute, startDate.Second, DateTimeKind.Utc)
-                        };
-                        await _repository.CreateNoteAdjustments(noteAdjustment);
                     }
                 }
 
@@ -125,24 +118,57 @@ namespace EndOfDateReportService.Services
             return returnBranch;
         }
 
-        public async Task UpdatePaymentMethods(IEnumerable<Branch> branches)
+        public async Task UpdatePaymentMethods(IEnumerable<Branch> branches, DateTime updateDate)
         {
             foreach (var branch in branches)
             {
-                //if (branch.Note != null)
-                //{
-                //    await _repository.UpdateNote(branch.Note);
-                //}
                 foreach (var lane in branch.Lanes )
                 {
                     foreach (var pm in lane.PaymentMethods)
                     {
                         await _repository.UpdatePaymentMethod(pm);
                     }
-                   await _repository.UpdateNoteAdjustments(lane.NoteAdjustments);
+                    await UpdateLaneNoteAdjustmenForDate(lane, updateDate);
                 }
             }
             
+        }
+
+        private async Task UpdateLaneNoteAdjustmenForDate(Lane lane, DateTime updateDate)
+        {
+            var note = await _reportContext.NotesAdjustments.Where(x => x.Date == updateDate
+            && x.LaneId == lane.LaneId
+            && x.BranchId == lane.BranchId).FirstOrDefaultAsync();
+
+            if(note is null)
+            {
+                var h=  await _reportContext.NotesAdjustments.AddAsync(new NoteAdjustments()
+                {
+                    BranchId = lane.BranchId,
+                    LaneId = lane.LaneId,
+                    Date = updateDate,
+                    Comments = lane.Note,
+                    CallAdjustments = lane.Adjustment
+                });
+
+            }
+            else
+            {
+                if(lane.Adjustment is not null)
+                {
+                    note.CallAdjustments = lane.Adjustment;
+                }
+
+                if(lane.Note is not null)
+                {
+                    note.Comments = lane.Note;
+                }
+
+                _reportContext.Update(note);
+            }
+
+            await _reportContext.SaveChangesAsync();
+
         }
 
         public Task<byte[]> PdfGenerator(DateTime date, int branchId)

@@ -28,9 +28,9 @@ public class ReportController:ControllerBase
     }
 
     [HttpPut()]
-    public async Task<IActionResult> UpdateReport([FromBody] IEnumerable<Branch> branches)
+    public async Task<IActionResult> UpdateReport([FromQuery] DateTime updateDate, [FromBody] IEnumerable<Branch> branches)
     {
-        await _branchService.UpdatePaymentMethods(branches);
+        await _branchService.UpdatePaymentMethods(branches, updateDate);
         return Ok();
     }
 
