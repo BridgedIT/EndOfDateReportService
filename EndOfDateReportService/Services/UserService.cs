@@ -1,4 +1,5 @@
-﻿using EndOfDateReportService.DataAccess;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using EndOfDateReportService.DataAccess;
 using EndOfDateReportService.Domain;
 using EndOfDateReportService.ServicesInterfaces;
 
@@ -23,9 +24,10 @@ namespace EndOfDateReportService.Services
             return userToReturn.Result;
         }
 
-        public User UpdateUser(User User)
+        public User UpdateUser(User user)
         {
-            throw new NotImplementedException();
+            var userToReturn = _repository.UpdateUser(user);
+            return userToReturn.Result;
         }
 
         public void DeleteUser(User user)

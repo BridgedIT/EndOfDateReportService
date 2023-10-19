@@ -6,7 +6,7 @@ namespace EndOfDateReportService.ServicesInterfaces
     {
         public User CreateUser(User user);
 
-        public User UpdateUser(User User);
+        public User UpdateUser(User user);
 
         public void DeleteUser(User user);
 
