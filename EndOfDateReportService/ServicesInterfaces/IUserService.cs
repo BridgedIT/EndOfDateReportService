@@ -12,6 +12,5 @@ namespace EndOfDateReportService.ServicesInterfaces
 
         public void LogIn(User user);
 
-        public void LogOut(User user);
     }
 }

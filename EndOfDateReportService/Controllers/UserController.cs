@@ -1,4 +1,7 @@
-﻿using EndOfDateReportService.Models.In;
+﻿using AutoMapper;
+using EndOfDateReportService.Domain;
+using EndOfDateReportService.Models.In;
+using EndOfDateReportService.ServicesInterfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EndOfDateReportService.Controllers
@@ -7,27 +10,45 @@ namespace EndOfDateReportService.Controllers
     [Route("api/user")]
     public class UserController : ControllerBase
     {
-        public UserController() 
+        private IUserService _userService;
+        private IMapper _mapper;
+        public UserController(IUserService userService, IMapper mapper)
         { 
-        
+            _userService = userService;
+            _mapper = mapper;
         }
 
         [HttpPost("/create")]
-        public void CreateUser([FromBody] UserModelIn sessionModelIn) 
-        { 
-            
+        public async Task<IActionResult> CreateUser([FromBody] UserModelIn userModelIn) 
+        {
+            User user = _mapper.Map<User>(userModelIn);
+            _userService.CreateUser(user);
+            return Ok(user);
+        }
+
+        [HttpPost("/update")]
+        public async Task<IActionResult> UpdateUser([FromBody] UserModelIn userModelIn)
+        {
+            User user = _mapper.Map<User>(userModelIn);
+            _userService.UpdateUser(user);
+            return Ok(user);
+        }
+
+        [HttpPost("/delete")]
+        public async Task<IActionResult> DeleteUser([FromBody] UserModelIn userModelIn)
+        {
+            User user = _mapper.Map<User>(userModelIn);
+            _userService.DeleteUser(user);
+            return Ok(user);
         }
 
         [HttpGet("/login")]
-        public void LogIn()
+        public async Task<IActionResult> LogIn([FromBody] UserModelIn userModelIn)
         {
-
+            User user = _mapper.Map<User>(userModelIn);
+            _userService.LogIn(user);
+            return Ok(user);
         }
 
-        [HttpGet("/logout")]
-        public void LogOut()
-        {
-
-        }
     }
 }

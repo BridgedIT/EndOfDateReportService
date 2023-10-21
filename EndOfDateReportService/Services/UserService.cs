@@ -37,14 +37,7 @@ namespace EndOfDateReportService.Services
 
         public async void LogIn(User user)
         {
-            if (await _repository.UserExistsAsync(user)) 
-            { 
-            }
-        }
-
-        public void LogOut(User user)
-        {
-            throw new NotImplementedException();
+            await _repository.UserExistsAsync(user);
         }
     }
 }
