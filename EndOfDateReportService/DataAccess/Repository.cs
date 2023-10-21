@@ -110,7 +110,7 @@ public class Repository
     {
         try 
         {
-            if (await UserExistsAsync(entity.UserName)) 
+            if (await UserExistsAsync(entity)) 
             {
                 var user = context.Users.Update(entity);
                 await context.SaveChangesAsync();
@@ -135,11 +135,11 @@ public class Repository
         return null;
     }
 
-    public async Task<bool> UserExistsAsync(string username)
+    public async Task<bool> UserExistsAsync(User user)
     {
         try
         {
-            return await context.Users.AnyAsync(x => x.UserName == username);
+            return await context.Users.AnyAsync(x => x.UserName == user.UserName && x.Password == user.Password);
         }
         catch (Exception ex)
         {
@@ -148,5 +148,20 @@ public class Repository
         }
     }
 
+    public async Task DeleteUser(User entity)
+    {
+        try
+        {
+            if (await UserExistsAsync(entity))
+            {
+                var user = context.Users.Remove(entity);
+                await context.SaveChangesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            var e = ex.Message;
+        }
+    }
 
 }

@@ -32,12 +32,14 @@ namespace EndOfDateReportService.Services
 
         public void DeleteUser(User user)
         {
-            throw new NotImplementedException();
+            var deleted = _repository.DeleteUser(user);
         }
 
-        public void LogIn(User user)
+        public async void LogIn(User user)
         {
-            throw new NotImplementedException();
+            if (await _repository.UserExistsAsync(user)) 
+            { 
+            }
         }
 
         public void LogOut(User user)
