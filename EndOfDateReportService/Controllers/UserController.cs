@@ -22,7 +22,7 @@ namespace EndOfDateReportService.Controllers
         public async Task<IActionResult> CreateUser([FromBody] UserModelIn userModelIn) 
         {
             User user = _mapper.Map<User>(userModelIn);
-            _userService.CreateUserAsync(user);
+            await _userService.CreateUserAsync(user);
             return Ok(user);
         }
 
@@ -30,7 +30,7 @@ namespace EndOfDateReportService.Controllers
         public async Task<IActionResult> UpdateUser([FromBody] UserModelIn userModelIn)
         {
             User user = _mapper.Map<User>(userModelIn);
-            _userService.UpdateUserAsync(user);
+            await _userService.UpdateUserAsync(user);
             return Ok(user);
         }
 
@@ -38,7 +38,7 @@ namespace EndOfDateReportService.Controllers
         public async Task<IActionResult> DeleteUser([FromBody] UserModelIn userModelIn)
         {
             User user = _mapper.Map<User>(userModelIn);
-            _userService.DeleteUserAsync(user);
+            await _userService.DeleteUserAsync(user);
             return Ok(user);
         }
 
@@ -46,7 +46,7 @@ namespace EndOfDateReportService.Controllers
         public async Task<IActionResult> LogIn([FromBody] UserModelIn userModelIn)
         {
             User user = _mapper.Map<User>(userModelIn);
-            _userService.LogIn(user);
+            await _userService.LogIn(user);
             return Ok(user);
         }
 
