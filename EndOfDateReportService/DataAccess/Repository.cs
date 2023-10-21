@@ -153,9 +153,4 @@ public class Repository
             var e = ex.Message;
         }
     }
-
-    internal Task<bool> UserExistsAsync()
-    {
-        throw new NotImplementedException();
-    }
 }
