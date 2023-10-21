@@ -42,7 +42,7 @@ public class ReportContext: DbContext
         modelBuilder.Entity<PaymentMethod>().Property(x => x.Id).ValueGeneratedOnAdd();
         modelBuilder.Entity<PaymentMethod>().HasKey(x => x.Id);
 
-
+        modelBuilder.Entity<User>().HasKey(x => x.Id);
 
 
         modelBuilder.Entity<Branch>().HasData(

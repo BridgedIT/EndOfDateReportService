@@ -18,26 +18,42 @@ namespace EndOfDateReportService.Services
             _repository = repository;
         }
 
-        public User CreateUser(User user)
+        public async Task<User> CreateUserAsync(User user)
         {
-            var userToReturn = _repository.CreateUser(user);
-            return userToReturn.Result;
+            if (await _repository.UserExistsAsync(user)) 
+            {
+                var userToReturn = _repository.CreateUser(user);
+                return userToReturn.Result;
+            }
+            return null;
         }
 
-        public User UpdateUser(User user)
+        public async Task<User> UpdateUserAsync(User user)
         {
-            var userToReturn = _repository.UpdateUser(user);
-            return userToReturn.Result;
+            if (await _repository.UserExistsAsync(user)) 
+            {
+                var userToReturn = _repository.UpdateUser(user);
+                return userToReturn.Result;
+            }
+            return null;
         }
 
-        public void DeleteUser(User user)
+        public async Task DeleteUserAsync(User user)
         {
-            var deleted = _repository.DeleteUser(user);
+            if (await _repository.UserExistsAsync(user))
+            {
+                var deleted = _repository.DeleteUser(user);
+            }
         }
 
-        public async void LogIn(User user)
+        public async Task<bool> LogIn(User user)
         {
-            await _repository.UserExistsAsync(user);
+            return await _repository.UserExistsAsync(user);
+        }
+
+        public async Task<bool> UserExistsAsync(User user) 
+        {
+            return await _repository.UserExistsAsync(user);
         }
     }
 }

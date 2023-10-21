@@ -125,21 +125,11 @@ public class Repository
         }
     }
 
-    public async Task<User> GetUser(string user)
-    {
-        if (await UserExistsAsync(user))
-        {
-            return await context.Users.FirstOrDefaultAsync(x => x.UserName == user);
-        }
-
-        return null;
-    }
-
     public async Task<bool> UserExistsAsync(User user)
     {
         try
         {
-            return await context.Users.AnyAsync(x => x.UserName == user.UserName && x.Password == user.Password);
+            return await context.Users.AnyAsync(x => x.UserName == user.UserName && x.Password == user.Password && x.Id == user.Id);
         }
         catch (Exception ex)
         {
@@ -164,4 +154,8 @@ public class Repository
         }
     }
 
+    internal Task<bool> UserExistsAsync()
+    {
+        throw new NotImplementedException();
+    }
 }
