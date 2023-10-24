@@ -136,9 +136,9 @@ namespace EndOfDateReportService.Services
 
         private async Task UpdateLaneNoteAdjustmenForDate(Lane lane, DateTime updateDate)
         {
-            var note = await _reportContext.NotesAdjustments.Where(x => x.Date == updateDate
+            var note = await _reportContext.NotesAdjustments.FirstOrDefaultAsync(x => x.Date == updateDate
             && x.LaneId == lane.LaneId
-            && x.BranchId == lane.BranchId).FirstOrDefaultAsync();
+            && x.BranchId == lane.BranchId);
 
             if(note is null)
             {
@@ -189,7 +189,7 @@ namespace EndOfDateReportService.Services
 
         public async Task<List<BranchModelOut>> AddFees(IEnumerable<Branch> branches, DateTime date)
         {
-            List<BranchModelOut> branchesModelOut = new List<BranchModelOut>(); ;
+            List<BranchModelOut> branchesModelOut = new List<BranchModelOut>(); 
             foreach (var branch in branches)
             {
                 branchesModelOut.Add(

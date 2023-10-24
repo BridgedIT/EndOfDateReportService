@@ -10,15 +10,34 @@ public class Repository
     {
         context = reportContent;
     }
-    
-   
+
+
 
     public async Task<IEnumerable<Branch>> Get(DateTime reportDate)
     {
-        return await context.Branches
-            .Include(branch => branch.Lanes)
-            .ThenInclude(lane => lane.PaymentMethods.Where(pm => pm.ReportDate == reportDate))
-            .ToListAsync(); 
+        var branches = await context.Branches
+        .Include(branch => branch.Lanes)
+            .ThenInclude(lane => lane.NoteAdjustments)
+                .Include(branch => branch.Lanes)
+                    .ThenInclude(lane => lane.PaymentMethods.Where(pm => pm.ReportDate == reportDate))
+        .ToListAsync();
+
+        foreach (var branch in branches)
+        {
+            foreach (var lane in branch.Lanes)
+            {
+                var relevantNoteAdjustment = lane.NoteAdjustments
+                    .FirstOrDefault(na => na.Date == reportDate && na.LaneId == lane.LaneId && na.BranchId == branch.Id);
+
+                if (relevantNoteAdjustment != null)
+                {
+                    lane.Note = relevantNoteAdjustment.Comments;
+                    lane.Adjustment = relevantNoteAdjustment.CallAdjustments;
+                }
+            }
+        }
+
+        return branches;
     }
 
     public async Task CreatePaymentMethodReport(PaymentMethod paymentMethod)
