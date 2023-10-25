@@ -17,7 +17,7 @@ public class Repository
     {
         var branches = await context.Branches
         .Include(branch => branch.Lanes)
-            .ThenInclude(lane => lane.NoteAdjustments)
+            .ThenInclude(lane => lane.NoteAdjustments.Where(n => n.Date == reportDate))
                 .Include(branch => branch.Lanes)
                     .ThenInclude(lane => lane.PaymentMethods.Where(pm => pm.ReportDate == reportDate))
         .ToListAsync();
@@ -26,8 +26,8 @@ public class Repository
         {
             foreach (var lane in branch.Lanes)
             {
-                var relevantNoteAdjustment = lane.NoteAdjustments
-                    .FirstOrDefault(na => na.Date == reportDate && na.LaneId == lane.LaneId && na.BranchId == branch.Id);
+                var relevantNoteAdjustment = context.NotesAdjustments.FirstOrDefault(x => x.BranchId == lane.BranchId && x.LaneId == lane.LaneId
+                && x.Date == reportDate);
 
                 if (relevantNoteAdjustment != null)
                 {

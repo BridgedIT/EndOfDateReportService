@@ -24,7 +24,7 @@ public class ReportController:ControllerBase
     {
         var result = await _branchService.GenerateReport(startDate, endDate);
         var response = await _branchService.AddFees(result, startDate);
-        return Ok(response);
+         return Ok(response);
     }
 
     [HttpPut()]

@@ -46,9 +46,13 @@ namespace EndOfDateReportService.Services
             var title = new Paragraph($"Payment Methods for {branch.Name} - {dateFormatted}", titleFont);
             title.Alignment = Element.ALIGN_CENTER;
             document.Add(title);
+            var adjTotal = 0.0;
 
             foreach (var lane in branch.Lanes)
             {
+                adjTotal += lane.Adjustment ?? 0.0;
+                var adjustment = lane.Adjustment ?? 0.0;
+                var note = "";
                 var laneHeaderFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 14);
                 var laneHeader = new Paragraph($"Lane {lane.LaneId}", laneHeaderFont);
                 laneHeader.SpacingBefore = 10f;
@@ -72,10 +76,25 @@ namespace EndOfDateReportService.Services
                     laneTotalReportedAmount += paymentMethod.ReportedAmount;
                     laneTotalVariance += paymentMethod.ReportedAmount - paymentMethod.ActualAmount;
                 }
+                laneTotalVariance = laneTotalVariance - (decimal)adjustment;
+                AddTotalsRow(table, "Lane Totals", laneTotalActualAmount, laneTotalReportedAmount, laneTotalVariance /*- (decimal)adjustmant*/);
+                
 
-                AddTotalsRow(table, "Lane Totals", laneTotalActualAmount, laneTotalReportedAmount, laneTotalVariance);
-
+                BaseFont bfAd = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
+                Font fontAD = new Font(bfAd, 12, Font.NORMAL);
+                
                 document.Add(table);
+                if (lane.Adjustment != null)
+                {
+                    string adjustmentLine = $"Adjustment                                ${Math.Round((decimal)lane.Adjustment, 2)}";
+                    Paragraph paragraphAdj = new Paragraph(new Chunk(adjustmentLine, fontAD));
+                    document.Add(paragraphAdj);
+                }
+                if (lane.Note != null)
+                {
+                    Paragraph paragraphNote = new Paragraph(new Chunk(lane.Note, fontAD));
+                    document.Add(paragraphNote);
+                }
             }
 
             var summaryHeaderFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 14);
@@ -114,14 +133,14 @@ namespace EndOfDateReportService.Services
 
             foreach (var methodTotal in paymentMethodTotals)
             {
-                AddTotalsRow(summaryTable, methodTotal.Key, methodTotal.Value.Item1, methodTotal.Value.Item2, methodTotal.Value.Item3);
+                AddTotalsRow(summaryTable, methodTotal.Key, methodTotal.Value.Item1, methodTotal.Value.Item2, methodTotal.Value.Item3 );
             }
 
             decimal grandTotalActualAmount = paymentMethodTotals.Values.Sum(t => t.Item1);
             decimal grandTotalReportedAmount = paymentMethodTotals.Values.Sum(t => t.Item2);
             decimal grandTotalVariance = paymentMethodTotals.Values.Sum(t => t.Item3);
-
-            AddTotalsRow(summaryTable, "Grand Totals", grandTotalActualAmount, grandTotalReportedAmount, grandTotalVariance);
+            grandTotalVariance = grandTotalVariance - (decimal)adjTotal;
+            AddTotalsRow(summaryTable, "Grand Totals", grandTotalActualAmount, grandTotalReportedAmount, grandTotalVariance /*- (decimal)adjTotal*/);
 
             document.Add(summaryTable);
 
@@ -134,7 +153,7 @@ namespace EndOfDateReportService.Services
             var fee = await ExecuteFEEQuery(date, branch);
 
             string gstLine = $"GST                                              ${gst}";
-            string feeLine = $"EFTPOS Fee                                ${fee}";
+            string feeLine = $"EFTPOS Fee                                ${Math.Round(fee,2)}";
 
             BaseFont bf = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
             Font font = new Font(bf, 12, Font.NORMAL);
@@ -145,6 +164,10 @@ namespace EndOfDateReportService.Services
            // document.Add(paragraphGST);
             document.Add(paragraphEFTPOS);
             
+            string ttlAdj = $"Total Adjustment                         ${Math.Round(adjTotal,2)}";
+            Paragraph paragraphadjttl = new Paragraph(new Chunk(ttlAdj, font));
+            document.Add(paragraphadjttl);
+
 
             document.Close();
 

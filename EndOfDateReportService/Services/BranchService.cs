@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using EndOfDateReportService.Models.Out;
 using System.Reflection.Metadata.Ecma335;
 using AutoMapper;
+using DocumentFormat.OpenXml.InkML;
 
 namespace EndOfDateReportService.Services
 {
@@ -37,11 +38,11 @@ namespace EndOfDateReportService.Services
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
                 await connection.OpenAsync();
-
+                endDate = endDate.AddHours(23).AddMinutes(59).AddSeconds(59);
                 string sqlQuery = "WITH AllPaymentMethods AS (SELECT 'Cash' AS PaymentMethod UNION ALL SELECT 'EFTPOS' UNION ALL SELECT 'Account' UNION ALL SELECT 'Credit Card' UNION ALL SELECT 'Extra Cash' UNION ALL SELECT 'Bank Payment' UNION ALL SELECT 'Credit Note' UNION ALL SELECT 'Voucher') SELECT APM.PaymentMethod, COALESCE(SUM(TP.Value), 0) AS ActualAmount FROM AllPaymentMethods APM LEFT JOIN (SELECT TH.TransNo, TP.MediaID, SUM(TP.Value) AS Value FROM AKPOS.dbo.TransHeaders as TH LEFT JOIN AKPOS.dbo.TransPayments TP ON TH.TransNo = TP.TransNo AND TH.Station = TP.Station and TH.Branch = TP.Branch WHERE TH.Logged >=@StartDate AND TH.Logged <= @EndDate AND TH.Branch = @BranchID AND TH.Station = @StationID GROUP BY TH.TransNo, TP.MediaID union SELECT TH.TransNo, 1 as MediaID, -SUM(TP.Change) AS Value FROM AKPOS.dbo.TransHeaders TH LEFT JOIN AKPOS.dbo.TransPayments TP ON TH.TransNo = TP.TransNo AND TH.Station = TP.Station and TH.Branch = TP.Branch WHERE TH.Logged >= @StartDate AND TH.Logged <= @EndDate AND TH.Branch =@BranchID AND TH.Station = @StationID GROUP BY TH.TransNo, TP.MediaID) TP ON APM.PaymentMethod = CASE WHEN TP.MediaID = 1 THEN 'Cash' WHEN TP.MediaID = 3 THEN 'EFTPOS' WHEN TP.MediaID = 4 THEN 'Account' WHEN TP.MediaID = 9 THEN 'Credit Card' WHEN TP.MediaID = 10 THEN 'Extra Cash' WHEN TP.MediaID = 13 THEN 'Bank Payment' WHEN TP.MediaID = 7 THEN 'Credit Note' WHEN TP.MediaID = 6 THEN 'Voucher' END GROUP BY APM.PaymentMethod ORDER BY APM.PaymentMethod;";
                 SqlCommand command = new SqlCommand(sqlQuery, connection);
                 command.Parameters.AddWithValue("@StartDate", startDate);
-                command.Parameters.AddWithValue("@EndDate", endDate);
+                command.Parameters.AddWithValue("@EndDate", endDate.AddHours(23).AddMinutes(59).AddSeconds(59));
                 command.Parameters.AddWithValue("@BranchID", branchId);
                 command.Parameters.AddWithValue("@StationID", stationId);
 
@@ -136,35 +137,41 @@ namespace EndOfDateReportService.Services
 
         private async Task UpdateLaneNoteAdjustmenForDate(Lane lane, DateTime updateDate)
         {
-            var note = await _reportContext.NotesAdjustments.FirstOrDefaultAsync(x => x.Date == updateDate
-            && x.LaneId == lane.LaneId
-            && x.BranchId == lane.BranchId);
-
-            if(note is null)
+            try
             {
-                var h=  await _reportContext.NotesAdjustments.AddAsync(new NoteAdjustments()
-                {
-                    BranchId = lane.BranchId,
-                    LaneId = lane.LaneId,
-                    Date = updateDate,
-                    Comments = lane.Note,
-                    CallAdjustments = lane.Adjustment
-                });
+                var note = await _reportContext.NotesAdjustments.FirstOrDefaultAsync(x => x.Date == updateDate
+                && x.LaneId == lane.LaneId
+                && x.BranchId == lane.BranchId);
 
-            }
-            else
+                if (note is null)
+                {
+                    var h = await _reportContext.NotesAdjustments.AddAsync(new NoteAdjustments()
+                    {
+                        BranchId = lane.BranchId,
+                        LaneId = lane.LaneId,
+                        Date = updateDate,
+                        Comments = lane.Note,
+                        CallAdjustments = lane.Adjustment
+                    });
+
+                }
+                else
+                {
+                    if (lane.Adjustment is not null)
+                    {
+                        note.CallAdjustments = lane.Adjustment;
+                    }
+
+                    if (lane.Note is not null)
+                    {
+                        note.Comments = lane.Note;
+                    }
+
+                    _reportContext.Update(note);
+                }
+            }catch (Exception ex)
             {
-                if(lane.Adjustment is not null)
-                {
-                    note.CallAdjustments = lane.Adjustment;
-                }
-
-                if(lane.Note is not null)
-                {
-                    note.Comments = lane.Note;
-                }
-
-                _reportContext.Update(note);
+                var exe = ex.ToString();
             }
 
             await _reportContext.SaveChangesAsync();
@@ -174,7 +181,23 @@ namespace EndOfDateReportService.Services
         public Task<byte[]> PdfGenerator(DateTime date, int branchId)
         {
 
-            var branch = _reportContext.Branches.Include(x => x.Lanes).ThenInclude(l => l.PaymentMethods.Where(pm => pm.ReportDate == new DateTime(date.Year, date.Month, date.Day, date.Hour, date.Minute, date.Second, DateTimeKind.Utc))).FirstOrDefault(p => p.Id == branchId);
+            var branch = _reportContext.Branches.Include(x => x.Lanes)
+                .ThenInclude(l => l.PaymentMethods
+                .Where(pm => pm.ReportDate == new DateTime(date.Year, date.Month, date.Day, date.Hour, date.Minute, date.Second, DateTimeKind.Utc)))
+                .FirstOrDefault(p => p.Id == branchId);
+
+                foreach (var lane in branch.Lanes)
+                {
+                    var relevantNoteAdjustment = _reportContext.NotesAdjustments.FirstOrDefault(x => x.BranchId == lane.BranchId && x.LaneId == lane.LaneId
+                    && x.Date == date);
+
+                    if (relevantNoteAdjustment != null)
+                    {
+                        lane.Note = relevantNoteAdjustment.Comments;
+                        lane.Adjustment = relevantNoteAdjustment.CallAdjustments;
+                    }
+                }
+
             if (branch != null)
             {
                 return _pdfService.GenerateBranchPaymentMethodsPdf(branch, date);
