@@ -139,8 +139,7 @@ namespace EndOfDateReportService.Services
             decimal grandTotalActualAmount = paymentMethodTotals.Values.Sum(t => t.Item1);
             decimal grandTotalReportedAmount = paymentMethodTotals.Values.Sum(t => t.Item2);
             decimal grandTotalVariance = paymentMethodTotals.Values.Sum(t => t.Item3);
-            grandTotalVariance = grandTotalVariance - (decimal)adjTotal;
-            AddTotalsRow(summaryTable, "Grand Totals", grandTotalActualAmount, grandTotalReportedAmount, grandTotalVariance /*- (decimal)adjTotal*/);
+            AddTotalsRow(summaryTable, "Grand Totals", grandTotalActualAmount, grandTotalReportedAmount, grandTotalVariance - (decimal)adjTotal);
 
             document.Add(summaryTable);
 
@@ -158,10 +157,10 @@ namespace EndOfDateReportService.Services
             BaseFont bf = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, BaseFont.NOT_EMBEDDED);
             Font font = new Font(bf, 12, Font.NORMAL);
 
-            //Paragraph paragraphGST = new Paragraph(new Chunk(gstLine, font));
+            Paragraph paragraphGST = new Paragraph(new Chunk(gstLine, font));
             Paragraph paragraphEFTPOS = new Paragraph(new Chunk(feeLine, font));
 
-           // document.Add(paragraphGST);
+            document.Add(paragraphGST);
             document.Add(paragraphEFTPOS);
             
             string ttlAdj = $"Total Adjustment                         ${Math.Round(adjTotal,2)}";
@@ -216,7 +215,7 @@ namespace EndOfDateReportService.Services
             {
                 await connection.OpenAsync();
 
-                string sqlQuery = "select sum(TH.TotalAfterTax-TH.TotalBeforeTax) as GST from TransHeaders TH where cast(TH.Logged as Date) = '"+date+"' and TransType = 'C' and TransStatus = 'C' and th.Branch =" + branchId;
+                string sqlQuery = "select sum(TH.TotalAfterTax-TH.TotalBeforeTax) as GST from TransHeaders TH where cast(TH.Logged as Date) = '"+date.ToString("yyyy-MM-dd") + "' and TransType = 'C' and TransStatus = 'C' and th.Branch =" + branchId;
                 SqlCommand command = new SqlCommand(sqlQuery, connection);
                 try
                 {
