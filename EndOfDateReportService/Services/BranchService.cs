@@ -205,9 +205,9 @@ namespace EndOfDateReportService.Services
             return null;
         }
 
-        public async Task ExcelGenerator(DateTime fromDate, DateTime toDate)
+        public async Task<byte[]> ExcelGenerator(DateTime fromDate, DateTime toDate)
         {
-            await _excelService.ExportToExcel(fromDate, toDate);
+            return await _excelService.ExportToExcel(fromDate, toDate);
         }
 
         public async Task<List<BranchModelOut>> AddFees(IEnumerable<Branch> branches, DateTime date)

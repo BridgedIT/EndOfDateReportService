@@ -45,8 +45,8 @@ public class ReportController:ControllerBase
     [HttpGet("get")]
     public async Task<IActionResult> CreateSummary([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
     {
-        await _branchService.ExcelGenerator(fromDate, toDate);
-        return Ok();
+        var file = await _branchService.ExcelGenerator(fromDate, toDate);
+        return File(file, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "sample.xlsx");
     }
 }
 
