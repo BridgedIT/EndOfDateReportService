@@ -1,4 +1,8 @@
+using System;
+using System.Collections.Generic;
 using System.Data;
+using System.IO;
+using System.Threading.Tasks;
 using EndOfDateReportService.Domain;
 using Microsoft.Data.SqlClient;
 using OfficeOpenXml;
@@ -145,337 +149,7 @@ public class ExcelService
         }
     }
 
-
-
-
-    private async Task<DataTable> ExecuteSupplierCommisionQuery(string supplierCode, DateTime fromDateInclusive, DateTime toDateInclusive)
-    {
-        using (SqlConnection connection = new SqlConnection(connectionString))
-        {
-            await connection.OpenAsync();
-
-            string createViewScript = @"
-            -- CREATE VIEW
-            IF OBJECT_ID('dbo.vw_SupplierCommission', 'V') IS NULL
-            BEGIN
-                EXEC('
-                    CREATE VIEW dbo.vw_SupplierCommission AS
-                    SELECT
-                        C.LastName AS ''Last Name'',
-                        B.Name AS ''Branch'',
-                        I.UPC,
-                        I.Description,
-                        I.Field_Integer AS [Commission Rate],
-                        CAST(TH.Logged AS DATE) AS ''Date'',
-                        SUM(CASE WHEN DATEPART(dw, TH.Logged) = 2 THEN TL.Quantity ELSE 0 END) AS MON_QTY,
-                        SUM(CASE WHEN DATEPART(dw, TH.Logged) = 3 THEN TL.Quantity ELSE 0 END) AS TUE_QTY,
-                        SUM(CASE WHEN DATEPART(dw, TH.Logged) = 4 THEN TL.Quantity ELSE 0 END) AS WED_QTY,
-                        SUM(CASE WHEN DATEPART(dw, TH.Logged) = 5 THEN TL.Quantity ELSE 0 END) AS THU_QTY,
-                        SUM(CASE WHEN DATEPART(dw, TH.Logged) = 6 THEN TL.Quantity ELSE 0 END) AS FRI_QTY,
-                        SUM(CASE WHEN DATEPART(dw, TH.Logged) = 7 THEN TL.Quantity ELSE 0 END) AS SAT_QTY,
-                        SUM(CASE WHEN DATEPART(dw, TH.Logged) = 1 THEN TL.Quantity ELSE 0 END) AS SUN_QTY,
-                        SUM(TL.Quantity) AS Total,  
-                        SUM(CASE WHEN DATEPART(dw, TH.Logged) IN (2, 3, 4, 5, 6, 7, 1) THEN TL.Quantity ELSE 0 END) AS Totals,  
-                        SUM(CASE WHEN DATEPART(dw, TH.Logged) = 2 THEN TL.Quantity * TL.PriceSet ELSE 0 END) AS MondaySales,
-                        SUM(CASE WHEN DATEPART(dw, TH.Logged) = 3 THEN TL.Quantity * TL.PriceSet ELSE 0 END) AS TuesdaySales,
-                        SUM(CASE WHEN DATEPART(dw, TH.Logged) = 4 THEN TL.Quantity * TL.PriceSet ELSE 0 END) AS WednesdaySales,
-                        SUM(CASE WHEN DATEPART(dw, TH.Logged) = 5 THEN TL.Quantity * TL.PriceSet ELSE 0 END) AS ThursdaySales,
-                        SUM(CASE WHEN DATEPART(dw, TH.Logged) = 6 THEN TL.Quantity * TL.PriceSet ELSE 0 END) AS FridaySales,
-                        SUM(CASE WHEN DATEPART(dw, TH.Logged) = 7 THEN TL.Quantity * TL.PriceSet ELSE 0 END) AS SaturdaySales,
-                        SUM(CASE WHEN DATEPART(dw, TH.Logged) = 1 THEN TL.Quantity * TL.PriceSet ELSE 0 END) AS SundaySales,
-                        SUM(TL.Quantity * TL.PriceSet) AS TotalSales,  
-                        (SUM(TL.Quantity * TL.PriceSet) * I.Field_Integer/100) AS Commission,  
-                        SUM(TL.Quantity * TL.PriceSet) - (SUM(TL.Quantity * TL.PriceSet) * I.Field_Integer/100) AS Net  
-                    FROM
-                        TransLines AS TL
-                    JOIN Items AS I ON TL.UPC = I.UPC
-                    JOIN Branches AS B ON TL.Branch = B.ID
-                    JOIN TransHeaders AS TH ON TL.Branch = TH.Branch
-                                        AND TL.TransNo = TH.TransNo
-                                        AND TL.Station = TH.Station
-                    JOIN Customers AS C ON I.Supplier = C.Code
-                    WHERE
-                        I.Field_Integer is not null
-                    GROUP BY
-                        C.LastName,
-                        B.Name,  
-                        I.UPC,
-                        I.Description,
-                        I.Field_Integer,
-                        CAST(TH.Logged AS DATE);
-                ');
-            END;
-        ";
-
-            string createProcedureScript = @"
-            -- CREATE PROCEDURE
-            IF OBJECT_ID('dbo.sp_SupplierCommission', 'P') IS NULL
-            BEGIN
-                EXEC('
-                    CREATE PROCEDURE dbo.sp_SupplierCommission
-                        @SupplierCode VARCHAR(20),
-                        @FromDateInclusive DATE,
-                        @ToDateInclusive DATE
-                    AS
-                    BEGIN
-                        SELECT
-                            [Last Name],
-                            Branch,
-                            UPC,
-                            Description,
-                            dbo.vw_SupplierCommission.[Commission Rate] AS [Commission Rate], -- Specify the table alias
-                            SUM(MON_QTY) AS ''Monday'',
-                            SUM(TUE_QTY) AS ''Tuesday'',
-                            SUM(WED_QTY) AS ''Wednesday'',
-                            SUM(THU_QTY) AS ''Thursday'',
-                            SUM(FRI_QTY) AS ''Friday'',
-                            SUM(SAT_QTY) AS ''Saturday'',
-                            SUM(SUN_QTY) AS ''Sunday'',
-                            SUM(Totals) AS ''Totals'',
-                            SUM(MondaySales) AS ''Monday Sales'',
-                            SUM(TuesdaySales) AS ''Tuesday Sales'',
-                            SUM(WednesdaySales) AS ''Wednesday Sales'',
-                            SUM(ThursdaySales) AS ''Thursday Sales'',
-                            SUM(FridaySales) AS ''Friday Sales'',
-                            SUM(SaturdaySales) AS ''Saturday Sales'',
-                            SUM(SundaySales) AS ''Sunday Sales'',
-                            SUM(TotalSales) AS ''Total Sales'',
-                            SUM(Commission) AS ''Commission'',
-                            SUM(Net) AS ''Net''
-                        FROM
-                            dbo.vw_SupplierCommission
-                        WHERE
-                            [Date] BETWEEN @FromDateInclusive AND @ToDateInclusive
-                            AND UPC IN (SELECT UPC FROM Items WHERE Supplier = @SupplierCode)
-                        GROUP BY
-                            [Last Name],
-                            Branch,
-                            UPC,
-                            Description,
-                            dbo.vw_SupplierCommission.[Commission Rate] -- Specify the table alias
-                        ORDER BY
-                            Branch,
-                            Description,
-                            dbo.vw_SupplierCommission.[Commission Rate]; -- Specify the table alias
-                    END;
-                ');
-            END;
-        ";
-
-            string combinedScript = createViewScript + createProcedureScript;
-
-            using (SqlCommand command = new SqlCommand(combinedScript, connection))
-            {
-                await command.ExecuteNonQueryAsync();
-            }
-
-            using (SqlCommand spCommand = new SqlCommand("dbo.sp_SupplierCommission", connection))
-            {
-                spCommand.CommandType = CommandType.StoredProcedure;
-                spCommand.Parameters.AddWithValue("@SupplierCode", supplierCode);
-                spCommand.Parameters.AddWithValue("@FromDateInclusive", fromDateInclusive);
-                spCommand.Parameters.AddWithValue("@ToDateInclusive", toDateInclusive);
-
-                using (SqlDataAdapter adapter = new SqlDataAdapter(spCommand))
-                {
-                    DataTable dataTable = new DataTable();
-                    await Task.Run(() => adapter.Fill(dataTable));
-                    return dataTable;
-                }
-            }
-        }
-    }
-
-
-    private async Task<DataTable> ExecuteSummaryQuery(DateTime fromDateInclusive, DateTime toDateInclusive)
-    {
-        using (SqlConnection connection = new SqlConnection(connectionString))
-        {
-            await connection.OpenAsync();
-
-            string script = @"
-        IF OBJECT_ID('dbo.vw_SummaryCommission', 'V') IS NOT NULL
-        BEGIN
-            EXEC('DROP VIEW dbo.vw_SummaryCommission;');
-        END;
-
-        EXEC('
-            CREATE VIEW dbo.vw_SummaryCommission AS
-            SELECT
-                C.LastName AS ''Supplier'',
-                CAST(TH.Logged AS DATE) AS ''Date'',
-                SUM(TL.Quantity * TL.PriceSet) AS Total,  
-                (SUM(TL.Quantity * TL.PriceSet) * I.Field_Integer/100) AS Commission,  
-                SUM(TL.Quantity * TL.PriceSet) - (SUM(TL.Quantity * TL.PriceSet) * I.Field_Integer/100) AS Net ,
-                SUM(TL.Quantity * TL.PriceSet) - (SUM(TL.Quantity * TL.PriceSet) * I.Field_Integer/100) AS Sheet  
-            FROM
-                TransLines AS TL
-            JOIN Items AS I ON TL.UPC = I.UPC
-            JOIN Branches AS B ON TL.Branch = B.ID
-            JOIN TransHeaders AS TH ON TL.Branch = TH.Branch
-                                  AND TL.TransNo = TH.TransNo
-                                  AND TL.Station = TH.Station
-            JOIN Customers AS C ON I.Supplier = C.Code
-            WHERE
-                I.Field_Integer is not null
-            GROUP BY
-                C.LastName,
-                CAST(TH.Logged AS DATE),
-                I.Field_Integer;
-        ');
-
-        IF OBJECT_ID('dbo.sp_SummaryCommission', 'P') IS NOT NULL
-        BEGIN
-            EXEC('DROP PROCEDURE dbo.sp_SummaryCommission;');
-        END;
-
-        EXEC('
-            CREATE PROCEDURE dbo.sp_SummaryCommission
-                @FromDateInclusive DATE,
-                @ToDateInclusive DATE
-            AS
-            BEGIN
-                SELECT DISTINCT
-                    [Supplier],
-                    SUM(Total) AS ''Total'',
-                    SUM(Commission) AS ''Commission'',
-                    SUM(Net) AS ''Net'',
-                    SUM(Sheet) AS ''Sheet''
-                FROM
-                    dbo.vw_SummaryCommission
-                WHERE
-                    [Date] BETWEEN @FromDateInclusive AND @ToDateInclusive
-                GROUP BY
-                    [Supplier]
-                ORDER BY
-                    [Supplier];
-            END;
-        ');
-        ";
-
-            using (SqlCommand command = new SqlCommand(script, connection))
-            {
-                await command.ExecuteNonQueryAsync();
-            }
-
-
-
-            using (SqlCommand spCommand = new SqlCommand("dbo.sp_SummaryCommission", connection))
-            {
-                spCommand.CommandType = CommandType.StoredProcedure;
-                spCommand.Parameters.AddWithValue("@FromDateInclusive", fromDateInclusive);
-                spCommand.Parameters.AddWithValue("@ToDateInclusive", toDateInclusive);
-
-                using (SqlDataAdapter adapter = new SqlDataAdapter(spCommand))
-                {
-                    DataTable dataTable = new DataTable();
-                    await Task.Run(() => adapter.Fill(dataTable));
-                    return dataTable;
-                }
-            }
-        }
-    }
-
-
-    private async Task<DataTable> ExecuteDraftWorkingOutputQuery(DateTime fromDateInclusive, DateTime toDateInclusive)
-    {
-        using (SqlConnection connection = new SqlConnection(connectionString))
-        {
-            await connection.OpenAsync();
-
-            string createViewScript = @"
-        IF OBJECT_ID('dbo.vw_AllSupplierCommission', 'V') IS NULL
-        BEGIN
-            EXEC('
-                CREATE VIEW dbo.vw_AllSupplierCommission AS
-                SELECT
-                    C.LastName AS ''Supplier'',
-                    CAST(TH.Logged AS DATE) AS ''Date'',
-                    SUM(CASE WHEN DATEPART(dw, TH.Logged) = 2 THEN TL.Quantity * TL.PriceSet ELSE 0 END) AS MondaySales,
-                    SUM(CASE WHEN DATEPART(dw, TH.Logged) = 3 THEN TL.Quantity * TL.PriceSet ELSE 0 END) AS TuesdaySales,
-                    SUM(CASE WHEN DATEPART(dw, TH.Logged) = 4 THEN TL.Quantity * TL.PriceSet ELSE 0 END) AS WednesdaySales,
-                    SUM(CASE WHEN DATEPART(dw, TH.Logged) = 5 THEN TL.Quantity * TL.PriceSet ELSE 0 END) AS ThursdaySales,
-                    SUM(CASE WHEN DATEPART(dw, TH.Logged) = 6 THEN TL.Quantity * TL.PriceSet ELSE 0 END) AS FridaySales,
-                    SUM(CASE WHEN DATEPART(dw, TH.Logged) = 7 THEN TL.Quantity * TL.PriceSet ELSE 0 END) AS SaturdaySales,
-                    SUM(CASE WHEN DATEPART(dw, TH.Logged) = 1 THEN TL.Quantity * TL.PriceSet ELSE 0 END) AS SundaySales,
-                    SUM(TL.Quantity * TL.PriceSet) AS TotalSales,
-                    (SUM(TL.Quantity * TL.PriceSet) * I.Field_Integer/100) AS Commission,
-                    SUM(TL.Quantity * TL.PriceSet) - (SUM(TL.Quantity * TL.PriceSet) * I.Field_Integer/100) AS Net  
-                FROM
-                    TransLines AS TL
-                JOIN Items AS I ON TL.UPC = I.UPC
-                JOIN TransHeaders AS TH ON TL.Branch = TH.Branch
-                                  AND TL.TransNo = TH.TransNo
-                                  AND TL.Station = TH.Station
-                JOIN Customers AS C ON I.Supplier = C.Code
-                WHERE
-                    I.Field_Integer is not null
-                GROUP BY
-                    C.LastName,
-                    I.Field_Integer,
-                    CAST(TH.Logged AS DATE);
-            ');
-        END;
-        ";
-            string createProcedureScript = @"
-        IF OBJECT_ID('dbo.sp_AllSupplierCommission', 'P') IS NULL
-        BEGIN
-            EXEC('
-                CREATE PROCEDURE dbo.sp_AllSupplierCommission
-                    @FromDateInclusive DATE,
-                    @ToDateInclusive DATE
-                AS
-                BEGIN
-                    SELECT
-                        Supplier,
-                        SUM(MondaySales) AS ''Monday Sales'',
-                        SUM(TuesdaySales) AS ''Tuesday Sales'',
-                        SUM(WednesdaySales) AS ''Wednesday Sales'',
-                        SUM(ThursdaySales) AS ''Thursday Sales'',
-                        SUM(FridaySales) AS ''Friday Sales'',
-                        SUM(SaturdaySales) AS ''Saturday Sales'',
-                        SUM(SundaySales) AS ''Sunday Sales'',
-                        SUM(TotalSales) AS ''Total Sales'',
-                        SUM(Commission) AS ''Commission'',
-                        SUM(Net) AS ''Net''
-                    FROM
-                        dbo.vw_AllSupplierCommission
-                    WHERE
-                        [Date] BETWEEN @FromDateInclusive AND @ToDateInclusive
-                    GROUP BY
-                        Supplier;
-                END;
-            ');
-        END;
-        ";
-
-
-            string combinedScript = createViewScript + createProcedureScript;
-
-            using (SqlCommand command = new SqlCommand(combinedScript, connection))
-            {
-                await command.ExecuteNonQueryAsync();
-            }
-
-            using (SqlCommand spCommand = new SqlCommand("dbo.sp_AllSupplierCommission", connection))
-            {
-                spCommand.CommandType = CommandType.StoredProcedure;
-                spCommand.Parameters.AddWithValue("@FromDateInclusive", fromDateInclusive);
-                spCommand.Parameters.AddWithValue("@ToDateInclusive", toDateInclusive);
-
-                using (SqlDataAdapter adapter = new SqlDataAdapter(spCommand))
-                {
-                    DataTable dataTable = new DataTable();
-                    await Task.Run(() => adapter.Fill(dataTable));
-                    return dataTable;
-                }
-            }
-        }
-    }
-
-
-
-    public async Task<byte[]> ExportToExcel(DateTime fromDateInclusive, DateTime toDateInclusive)
+    public async Task ExportToExcel(DateTime fromDateInclusive, DateTime toDateInclusive)
     {
 
         var path = _configuration.GetSection("commisionSalesPath");
@@ -507,13 +181,6 @@ public class ExcelService
 
             package.Save();
         }
-
-        if (!System.IO.File.Exists(fullPath))
-        {
-            return null;
-        }
-
-        return System.IO.File.ReadAllBytes(fullPath);
 
     }
 
@@ -722,14 +389,12 @@ public class ExcelService
                             var cell = commisionSheet.Cells[row, col].Address;
                             var priceSetCell = commisionSheet.Cells[row, PRICE_SET_COLUMN].Address;
                             var commissionCell = commisionSheet.Cells[row, COMMISION_RATE_COLUMN].Address;
-                            totalFormula += $"({commisionSalesSheet}!{cell}*{commisionSalesSheet}!{priceSetCell})+";
-                            commissionFormula += $"(({commisionSalesSheet}!{cell}*{commisionSalesSheet}!{priceSetCell})*({commisionSalesSheet}!{commissionCell}/100))+";
                         }
 
                     }
                 }
-                totalFormula = totalFormula.TrimEnd('+');
-                commissionFormula = commissionFormula.TrimEnd('+');
+                totalFormula = $"SUM({commisionSalesSheet}!{commisionSheet.Cells[startRow, 18].Address}:{commisionSalesSheet}!{commisionSheet.Cells[endRow, 18].Address})";
+                commissionFormula = $"SUM({commisionSalesSheet}!{commisionSheet.Cells[startRow, 19].Address}:{commisionSalesSheet}!{commisionSheet.Cells[endRow, 19].Address})";
                 netFormula = $"({summaryWorksheet.Cells[currentRow, TotalColumn].Address} - {summaryWorksheet.Cells[currentRow, CommissionColumn].Address})";
                 summaryWorksheet.Cells[currentRow, TotalColumn].Formula = totalFormula;
                 summaryWorksheet.Cells[currentRow, CommissionColumn].Formula = commissionFormula;
@@ -822,10 +487,6 @@ public class ExcelService
                             var cell = commisionSheet.Cells[row, col].Address;
                             var priceSetCell = commisionSheet.Cells[row, PRICE_SET_COLUMN].Address;
                             var commissionCell = commisionSheet.Cells[row, COMMISION_RATE_COLUMN].Address;
-                            totalFormula += $"({commisionSalesSheet}!{cell}*{commisionSalesSheet}!{priceSetCell})+";
-                            commissionFormula += $"(({commisionSalesSheet}!{cell}*{commisionSalesSheet}!{priceSetCell})*({commisionSalesSheet}!{commissionCell}/100))+";
-
-
                             dayFormula += $"({commisionSalesSheet}!{cell}*{commisionSalesSheet}!{priceSetCell})+";
                         }
 
@@ -836,8 +497,8 @@ public class ExcelService
 
                     dayColumnCount++;
                 }
-                totalFormula = totalFormula.TrimEnd('+');
-                commissionFormula = commissionFormula.TrimEnd('+');
+                totalFormula = $"SUM({commisionSalesSheet}!{commisionSheet.Cells[startRow, 18].Address}:{commisionSalesSheet}!{commisionSheet.Cells[endRow, 18].Address})";
+                commissionFormula = $"SUM({commisionSalesSheet}!{commisionSheet.Cells[startRow, 19].Address}:{commisionSalesSheet}!{commisionSheet.Cells[endRow, 19].Address})";
                 netFormula = $"({summaryWorksheet.Cells[currentRow, TotalColumn].Address} - {summaryWorksheet.Cells[currentRow, CommissionColumn].Address})";
                 summaryWorksheet.Cells[currentRow, TotalColumn].Formula = totalFormula;
                 summaryWorksheet.Cells[currentRow, CommissionColumn].Formula = commissionFormula;
@@ -931,6 +592,7 @@ public class ExcelService
             worksheet.Cells[1, i + 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
             worksheet.Cells[1, i + 1].Style.Fill.BackgroundColor.SetColor(brightGreen);
 
+            var currentSupplier = "";
             if (dataTable.Columns[i].ColumnName == "Period From" || dataTable.Columns[i].ColumnName == "Period To")
             {
                 for (int row = 0; row < dataTable.Rows.Count; row++)
@@ -979,6 +641,10 @@ public class ExcelService
             }
             else
             {
+                if (dataTable.Columns[i].ColumnName == "Supplier")
+                {
+
+                }
                 for (int row = 0; row < dataTable.Rows.Count; row++)
                 {
                     worksheet.Cells[row + 2, i + 1].Value = dataTable.Rows[row][i];
@@ -987,5 +653,29 @@ public class ExcelService
 
             worksheet.Column(i + 1).Width = 30;
         }
+
+        int priceSetColumnIndex = worksheet.Cells["1:1"].First(c => c.Text == "PriceSet").Start.Column;
+
+        worksheet.Cells[1, worksheet.Dimension.End.Column + 1].Value = "Total";
+        worksheet.Cells[1, worksheet.Dimension.End.Column + 1].Value = "Commission";
+
+        for (int row = 2; row <= worksheet.Dimension.End.Row; row++)
+        {
+            string priceSetCellReference = worksheet.Cells[row, priceSetColumnIndex].FullAddress;
+
+            string totalFormula = $"SUM({worksheet.Cells[row, priceSetColumnIndex + 1, row, priceSetColumnIndex + 7].Address}) * {priceSetCellReference}";
+
+            worksheet.Cells[row, worksheet.Dimension.End.Column - 1].Formula = totalFormula;
+
+            int commissionRateColumnIndex = worksheet.Cells["1:1"].First(c => c.Text == "Commission Rate").Start.Column;
+            string commissionRateCellReference = worksheet.Cells[row, commissionRateColumnIndex].FullAddress;
+
+            string commissionFormula = $"{worksheet.Cells[row, worksheet.Dimension.End.Column - 1].Address} * ({commissionRateCellReference} / 100)";
+
+            worksheet.Cells[row, worksheet.Dimension.End.Column].Formula = commissionFormula;
+            worksheet.Cells[row, worksheet.Dimension.End.Column].Style.Numberformat.Format = "[$NZD] #,##0.00";
+
+        }
+
     }
 }
