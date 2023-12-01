@@ -149,7 +149,7 @@ public class ExcelService
         }
     }
 
-    public async Task ExportToExcel(DateTime fromDateInclusive, DateTime toDateInclusive)
+    public async Task<byte[]> ExportToExcel(DateTime fromDateInclusive, DateTime toDateInclusive)
     {
 
         var path = _configuration.GetSection("commisionSalesPath");
@@ -181,7 +181,12 @@ public class ExcelService
 
             package.Save();
         }
+        if (!System.IO.File.Exists(fullPath))
+        {
+            return null;
+        }
 
+        return System.IO.File.ReadAllBytes(fullPath);
     }
 
     private void CreateSupplierSheet(KeyValuePair<string, Tuple<int, int>> supplier, ExcelPackage package)
